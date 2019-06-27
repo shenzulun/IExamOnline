@@ -1,0 +1,56 @@
+<link rel="stylesheet" type="text/css" href="/static/css/jquery.minicolors.css" />
+<script type="text/javascript" src="/static/js/jquery.minicolors.js"></script>
+<script type="text/javascript" src="/static/js/jquery.cookie.js"></script>
+
+<script type="text/javascript">
+
+    function changeSkinEvent(cookieName, inputId, skinId, cssName){
+        var logSkin = $.cookie(cookieName); 
+        if(logSkin != null){
+            $(inputId).val(logSkin);
+            $(skinId).css(cssName,logSkin);
+        }
+        $(inputId).minicolors({
+            control: $(this).attr('data-control') || 'hue',
+            defaultValue: $(this).attr('data-defaultValue') || '',
+            inline: $(this).attr('data-inline') === 'true',
+            letterCase: $(this).attr('data-letterCase') || 'lowercase',
+            opacity: $(this).attr('data-opacity'),
+            position: $(this).attr('data-position') || 'bottom left',
+            change: function(hex, opacity) {
+                if( !hex ) return;
+                if( opacity ) hex += ', ' + opacity;
+                try {
+                    //写到cookie
+                    $.cookie(cookieName, hex, { expires: 30,path: '/'}); 
+                    $(skinId).css(cssName,hex);
+                    console.log(hex);
+                } catch(e) {}
+            },
+            theme: 'bootstrap'
+        });
+    }
+	$(document).ready(function(){   
+		changeSkinEvent('log-skin-background','#change-skin-background','#log-container','background-color');       //背景颜色
+		changeSkinEvent('log-skin-font','#change-skin-font','#log-container','color');                        //字体颜色
+	})  
+</script>
+
+<div class="siderbar-right">
+    <div class="siderbar-btn">
+        <table>
+            <tr>
+                <td>
+                    <input type="text" id="change-skin-font" class="form-control"  data-position="bottom left" size="10" value="#aaa">
+                </td>
+                <td>
+                    <input type="text" id="change-skin-background" class="form-control"  data-position="bottom left" size="10" value="#333">
+                </td>
+            </tr>
+        </table>
+        <!-- 
+        <input type="button" id="change-skin" class="btn btn-default" data-position="bottom right" value="#0088cc" title="切换皮肤" value="皮肤"/>   
+         -->
+    </div>
+    
+</div>  
