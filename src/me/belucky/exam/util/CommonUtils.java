@@ -15,10 +15,10 @@ import java.util.Random;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import org.magen.tool.common.CacheCenter;
+import org.magen.tool.common.EasyUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import me.belucky.exam.core.QuestionUtils;
+import me.belucky.exam.core.task.TaskInitCenter;
 
 /**
  * 功能说明: 通用工具类
@@ -33,10 +33,9 @@ public class CommonUtils {
 	 */
 	public static void initCache(){
 		//先清除所有缓存
-		CacheCenter.getInstance().clearCache();
+		EasyUtil.chearCache();
 		log.info("缓存清除成功");
-		log.info("开始更新缓存...");
-		QuestionUtils.refreshCache();
+		TaskInitCenter.go();
 	}
 	
 	/**

@@ -55,7 +55,7 @@ public class QuestionUtils {
 			//从试题txt中读取
 			testQuestionList = parseFromTxt();
 		}
-		if(testQuestionList == null || testQuestionList.size() == 0){
+		if(testQuestionList == null || testQuestionList.size() == 0 || testQuestionList.get(0) == null){
 			//为空的话,则从数据库初始化试题信息
 			testQuestionList = initFromDB();
 		}else{
