@@ -1,0 +1,59 @@
+<script type="text/javascript">
+function appendLog(data){
+	$("#log-container div").append(data.retMsg); 
+	// 滚动条滚动到最低部
+    $("#log-container").scrollTop($("#log-container div").height() - $("#log-container").height());					           
+    $("#modal_log div").append(data.retMsg); 
+    $("#modal_log").scrollTop($("#modal_log div").height() - $("#modal_log").height());				
+}
+window.onresize=function(){
+	var currHeight = $(window).height() * 0.7;
+	$('#modal_log').css("height",currHeight);
+}
+
+function appendLogByMsg(msg){
+	msg += "<br/>";
+	$("#log-container div").append(msg); 
+	// 滚动条滚动到最低部
+    $("#log-container").scrollTop($("#log-container div").height() - $("#log-container").height());					           
+    $("#modal_log div").append(msg); 
+    $("#modal_log").scrollTop($("#modal_log div").height() - $("#modal_log").height());				
+}
+
+function showModal(){
+	$('#myModal').modal('show'); 
+}
+function hideModal(){
+    $('#myModal').modal('hide'); 
+}
+
+function clearModal(){
+    $('#log-container div').empty(); 
+}
+
+
+</script>
+<div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+  
+<div class="modal-dialog" style="width:100%;">
+  <div class="modal-content">
+    <div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">
+    ×
+    </button>
+    <h2 class="modal-title" id="myModalLabel">
+    实时日志
+    </h4>
+    </div>
+    
+    <div class="modal-body" id="modal_log" style="height: 800px;overflow-y: scroll;background: #000; color: green;text-align:left;">
+    	<div></div>
+    </div>
+    <div class="modal-footer">
+    <button type="button" class="btn btn-default" data-dismiss="modal">关闭
+    </button>
+    </div>
+  </div>
+ 
+  </div>
+</div>
