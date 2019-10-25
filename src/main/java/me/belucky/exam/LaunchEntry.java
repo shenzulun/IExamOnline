@@ -73,8 +73,9 @@ public class LaunchEntry extends JFinalConfig{
 	public void configRoute(Routes me) {
 		me.add("/", IndexController.class);	
 	}
-	
-	public void afterJFinalStart(){
+
+	@Override
+	public void onStart(){
 		CommonUtils.initCache();
 		try {
 			String indexUrl = PropKit.get("index_url");
@@ -87,13 +88,14 @@ public class LaunchEntry extends JFinalConfig{
 			log.error("打开浏览器失败...",e);
 		}
 	}
-	
-	public void beforeJFinalStop(){
+
+	@Override
+	public void onStop(){
 		
 	}
 	
 	public static void main(String[] args) {
-		JFinal.start("WebContent", 9999, "/", 5);
+		JFinal.start("WebContent", 9999, "/");
 	}
 
 	public void configEngine(Engine me) {
