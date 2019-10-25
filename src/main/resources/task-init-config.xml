@@ -5,9 +5,5 @@
  -->
 <tasks title="任务清单">
 	<default-classpath>me.belucky.exam.core.task.impl</default-classpath>
-    
-    <task id="WordTestQuestionParserTask" type="2" title="word版的试题库解析任务" prop="db-index-config.properties">
-        WordTestQuestionParserTask
-    </task>
 	
 </tasks>
