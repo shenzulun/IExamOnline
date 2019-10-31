@@ -6,7 +6,11 @@ package me.belucky.exam.util;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.jfinal.kit.PropKit;
+
 import me.belucky.easytool.task.TaskInitCenter;
+import me.belucky.easytool.util.FileTools;
 
 /**
  * 功能说明: 通用工具类
@@ -29,7 +33,43 @@ public class CommonUtils extends me.belucky.easytool.util.CommonUtils{
 				log.info("系统初始化成功...");
 			}
 		} catch (Exception e) {
+			e.printStackTrace();
 			log.error("系统初始化失败...",e);
+		}
+	}
+	
+	/**
+	 * 批量初始化prop目录
+	 * @param propFolderName
+	 */
+	public static void initProp(String... propFolderNames){
+		//类似遍历resources/logAnalyse目录
+		for(String propFolderName : propFolderNames){
+			String path = Thread.currentThread().getContextClassLoader().getResource(propFolderName).getFile();
+			String[] arr = FileTools.getFileNameArray(path, ".properties");
+			for(String s : arr){
+				PropKit.use(propFolderName + "/" + s);
+			}
+		}
+	}
+	
+	/**
+	 * 批量初始化prop目录
+	 * @param propFolderName prop目录
+	 * @param ignorePropName 忽略的prop文件名
+	 */
+	public static void initPropIgnore(String propFolderName, String ignorePropName){
+		String prePath = "";
+		if(!"".contentEquals(propFolderName)) {
+			prePath = propFolderName + "/";
+		}
+		String path = Thread.currentThread().getContextClassLoader().getResource(propFolderName).getFile();
+		String[] arr = FileTools.getFileNameArray(path, ".properties");
+		for(String s : arr){
+			if(!s.equals(ignorePropName)) {
+				PropKit.use(prePath + s);
+				log.info("配置文件[{}]加载成功...", s);
+			}
 		}
 	}
 	

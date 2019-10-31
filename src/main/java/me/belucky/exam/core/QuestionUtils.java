@@ -6,6 +6,7 @@ package me.belucky.exam.core;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -22,11 +23,12 @@ import me.belucky.exam.dto.QuestionAnswerDTO;
 import me.belucky.exam.dto.QuestionTypeDTO;
 import me.belucky.exam.dto.SelectOptionDTO;
 import me.belucky.exam.dto.TestQuestionDTO;
-import me.belucky.exam.model.CodeValue;
-import me.belucky.exam.model.TestQueryCond;
-import me.belucky.exam.model.TestQuestion;
-import me.belucky.exam.model.TestQuestionRecord;
-import me.belucky.exam.model.TestQuestionSelectOption;
+import me.belucky.exam.model.table.TCodeValue;
+import me.belucky.exam.model.table.TExam;
+import me.belucky.exam.model.table.TQueryCond;
+import me.belucky.exam.model.table.TQuestion;
+import me.belucky.exam.model.table.TQuestionRecord;
+import me.belucky.exam.model.table.TQuestionSelectOption;
 import me.belucky.exam.util.CommonUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -65,39 +67,32 @@ public class QuestionUtils {
 				initSaveIntoDB(testQuestionList);
 			}
 		}
-		List<TestQuestionDTO> testQuestionList1 = new ArrayList<TestQuestionDTO>();
-		List<TestQuestionDTO> testQuestionList2 = new ArrayList<TestQuestionDTO>();
-		List<TestQuestionDTO> testQuestionList3 = new ArrayList<TestQuestionDTO>();
 		Map<String,TestQuestionDTO> cacheMap = new ConcurrentHashMap<String,TestQuestionDTO>();
-		Map<String, TestQuestion> idMap = null;
+		Map<String, TQuestion> idMap = null;
 		if(testQuestionList != null && testQuestionList.size() > 0){
 			if(testQuestionList.get(0).getId() == 0){
 				//判断主键ID是否为空
-				List<TestQuestion> list = TestQuestion.dao.find("select * from t_question");
-				idMap = new HashMap<String, TestQuestion>();
-				for(TestQuestion testQ : list){
-					idMap.put(testQ.getInt("question_type") + "_" + testQ.getInt("seq"), testQ);
+				List<TQuestion> list = TQuestion.dao.findAll();
+				idMap = new HashMap<String, TQuestion>();
+				for(TQuestion testQ : list){
+					idMap.put(testQ.getQuestionType() + "_" + testQ.getSeq(), testQ);
 				}
 			}
 		}
 		for(TestQuestionDTO testDto : testQuestionList){
-			int type = testDto.getType();
-			String key = type + "_" + testDto.getSeq();
+			String key = getKey(testDto);
 			if(idMap != null){
-				testDto.setId(idMap.get(key).getInt("id"));
+				testDto.setId(idMap.get(key).getId());
 			}
 			cacheMap.put(key, testDto);
-			if(type == 1){
-				testQuestionList1.add(testDto);
-			}else if(type == 2){
-				testQuestionList2.add(testDto);
-			}else if(type == 3){
-				testQuestionList3.add(testDto);
+			String listKey = "exam_" + testDto.getExamId() + "_" + testDto.getType();
+			List<TestQuestionDTO> list = CacheUtils.getCache(listKey);
+			if(list == null) {
+				list = new ArrayList<TestQuestionDTO>();
 			}
+			list.add(testDto);
+			CacheUtils.putCache(listKey, list);
 		}
-		CacheUtils.putCache("test_questions_1", testQuestionList1);
-		CacheUtils.putCache("test_questions_2", testQuestionList2);
-		CacheUtils.putCache("test_questions_3", testQuestionList3);
 		CacheUtils.putCache(TEST_QUESTIONS_MAP, cacheMap);
 		log.info("试题库加载成功...");
 		//判断是否写入数据库
@@ -123,22 +118,26 @@ public class QuestionUtils {
 	 * @param seqno
 	 * @return
 	 */
-	public static List<TestQuestionDTO> queryTestQuestionsBySeq(String userNo, String seqno, String questionType){
+	public static List<TestQuestionDTO> queryTestQuestionsBySeq(QueryCondDTO queryCond){
 		Map<String,TestQuestionDTO> cacheMap = CacheUtils.getCache(TEST_QUESTIONS_MAP);
+		String questionType = queryCond.getQuestionType();
+		String seqno = queryCond.getQueryValue();
+		String userNo = queryCond.getUserNo();
 		List<TestQuestionDTO> list = null;
 		if("4".equals(questionType)){
 			//查询错题簿
-			list = queryIncorrectQuestions(userNo);
+			list = queryIncorrectQuestions(queryCond);
 			if(seqno == null || "".equals(seqno)){
 				return list;
 			}
 		}else if("5".equals(questionType)){
-			list = queryIncorrectQuestions(userNo);
+			list = queryIncorrectQuestions(queryCond);
 			if(seqno == null || "".equals(seqno)){
 				return list;
 			}
 		}else{
-			list = CacheUtils.getCache("test_questions_" + questionType);
+			String listKey = "exam_" + queryCond.getExamId() + "_" + questionType;
+			list = CacheUtils.getCache(listKey);
 			if(seqno == null || "".equals(seqno)){
 				seqno = new Random().nextInt(list.size()) + "";
 			}
@@ -158,7 +157,7 @@ public class QuestionUtils {
 					}
 				}else{
 					for(int r : randArr){
-						result.add(cacheMap.get(questionType + "_" + r));
+						result.add(cacheMap.get(queryCond.getExamId() + "_" + questionType + "_" + r));
 					}
 				}
 				continue;
@@ -373,22 +372,27 @@ public class QuestionUtils {
 	 * @param checkAnswers
 	 * @return
 	 */
-	public static List<QuestionAnswerDTO> submitAnswers(String userNo, String checkAnswers){
+	public static List<QuestionAnswerDTO> submitAnswers(QueryCondDTO queryCondDTO){
 		List<QuestionAnswerDTO> questionAnswersList = new ArrayList<QuestionAnswerDTO>();
 		Map<String,TestQuestionDTO> cacheMap = CacheUtils.getCache(TEST_QUESTIONS_MAP);
+		String checkAnswers = queryCondDTO.getQueryValue();
+		String userNo  = queryCondDTO.getUserNo();
 		//由于存在多选题,需先合并试题选项
 		Map<String, String> optionMap = new HashMap<String, String>();
 		String[] answers = checkAnswers.split(",");
 		for(String answer : answers){
-			//格式如：Q_1_1_A
-			//第1位：固定Q,第二位：试题类型,第三位:试题序号,选项
+			if("".equals(answer)) {
+				continue;
+			}
+			//格式如：Q__1_1_1_A
+			//第1位：固定Q,第二位：试卷大类，第三位：试题类型,第四位:试题序号,选项
 			String[] arr = answer.split("_");
-			String key = arr[1] + "_" + arr[2];
+			String key = arr[1] + "_" + arr[2] + "_" + arr[3];
 			if(optionMap.containsKey(key)){
 				String v = optionMap.get(key);
-				optionMap.put(key, v + arr[3]);
+				optionMap.put(key, v + arr[4]);
 			}else{
-				optionMap.put(key, arr[3]);
+				optionMap.put(key, arr[4]);
 			}
 		}
 		//检查答案是否正确
@@ -419,7 +423,7 @@ public class QuestionUtils {
 			questionAnswersList.add(ansDto);
 		}
 		//记录到数据库
-		saveTestQuestionRecord(questionAnswersList);
+		saveTestQuestionRecord(queryCondDTO, questionAnswersList);
 		return questionAnswersList;
 	}
 	
@@ -428,12 +432,21 @@ public class QuestionUtils {
 	 * @return
 	 */
 	private static List<TestQuestionDTO> initFromDB(){
+		List<TQuestion> list = TQuestion.dao.find("select t1.*,t2.select_key,t2.select_desc from t_question t1 left join t_question_select_option t2 on t1.id=t2.question_id order by t1.exam_id,t1.question_type,t1.seq asc");
+		return transform(list);
+	}
+	
+	/**
+	 * List<TQuestion> -> List<TestQuestionDTO>
+	 * @param list
+	 * @return
+	 */
+	public static List<TestQuestionDTO> transform(List<TQuestion> list){
 		List<TestQuestionDTO> testQuestionList = new ArrayList<TestQuestionDTO>();
-		List<TestQuestion> list = TestQuestion.dao.find("select t1.*,t2.select_key,t2.select_desc from t_question t1 left join t_question_select_option t2 on t1.id=t2.question_id order by t1.question_type,t1.seq asc");
 		String lastKey = "";
 		TestQuestionDTO tmp = null;
-		for(TestQuestion testQ : list){
-			String key = testQ.getInt("question_type") + "_" + testQ.getInt("seq");
+		for(TQuestion testQ : list){
+			String key = getKey(testQ);
 			if(!lastKey.equals(key)){
 				//和上一个key不同,说明出现新的试题
 				lastKey = key;
@@ -442,25 +455,46 @@ public class QuestionUtils {
 				}
 				//初始化新的试题
 				TestQuestionDTO t = new TestQuestionDTO();
-				t.setId(testQ.getInt("id"));
-				t.setType(testQ.getInt("question_type"));
-				t.setSeq(testQ.getInt("seq") + "");
-				t.setTitle(testQ.getStr("title"));
-				t.setSelectAnswer(testQ.getStr("select_answer"));
-				if(testQ.getInt("question_type") == 1 || testQ.getInt("question_type") == 2){
+				t.setExamId(testQ.getExamId());
+				t.setId(testQ.getId());
+				t.setType(testQ.getQuestionType());
+				t.setSeq(testQ.getSeq() + "");
+				t.setSelectChoose(testQ.getStr("select_option"));
+				t.setCreateDtStr(testQ.getStr("create_dt"));
+				if(testQ.getExamId() == 2) {
+					//乡村振兴
+					t.setTitle(testQ.getSeq() + "、" + testQ.getTitle());
+				}else {
+					t.setTitle(testQ.getTitle());
+				}
+				t.setSelectAnswer(testQ.getSelectAnswer());
+				if(testQ.getQuestionType() == 1 || testQ.getQuestionType() == 2){
 					//选择题
 					List<SelectOptionDTO> selectOptions = new ArrayList<SelectOptionDTO>();
-					selectOptions.add(new SelectOptionDTO(testQ.getStr("select_key"),testQ.getStr("select_desc")));
+					if(testQ.getExamId() != 1) {
+						//乡村振兴
+						selectOptions.add(new SelectOptionDTO(testQ.getStr("select_key"),testQ.getStr("select_key") + "、" + testQ.getStr("select_desc")));
+					}else {
+						selectOptions.add(new SelectOptionDTO(testQ.getStr("select_key"),testQ.getStr("select_desc")));
+					}
 					t.setSelectOptions(selectOptions);
-				}else if(testQ.getInt("question_type") == 3){
+				}else if(testQ.getQuestionType() == 3){
 					//判断题
-					t.setJudgeAnswer("1".equals(testQ.getStr("select_answer")));
+					t.setJudgeAnswer("1".equals(testQ.getSelectAnswer()));
 				}
 				tmp = t;
 			}else{
 				//否则,则是同一个试题,新的选择题选项
 				List<SelectOptionDTO> selectOptions = tmp.getSelectOptions();
-				selectOptions.add(new SelectOptionDTO(testQ.getStr("select_key"),testQ.getStr("select_desc")));
+				if(selectOptions == null) {
+					System.out.println(testQ.getId() + ":" + testQ.getTitle());
+				}
+				if(testQ.getExamId() != 1) {
+					//乡村振兴
+					selectOptions.add(new SelectOptionDTO(testQ.getStr("select_key"),testQ.getStr("select_key") + "、" + testQ.getStr("select_desc")));
+				}else {
+					selectOptions.add(new SelectOptionDTO(testQ.getStr("select_key"),testQ.getStr("select_desc")));
+				}
 			}
 		}
 		if(tmp != null){
@@ -476,7 +510,7 @@ public class QuestionUtils {
 	@Before(Tx.class)
 	private static void initSaveIntoDB(List<TestQuestionDTO> testQuestionList){
 		boolean isChange = true;
-		CodeValue dto = CodeValue.dao.findFirst("select * from T_CODE_VALUE where code=?", "last_modify_str");
+		TCodeValue dto = TCodeValue.dao.findFirst("select * from T_CODE_VALUE where code=?", "last_modify_str");
 		String lastModifyStr = dto.get("value_desc");
 		File file = new File("C:/Users/tzbank/Desktop/工作记录/20190419/tk_2017.txt");
 		long lastModified = 0L;
@@ -494,13 +528,14 @@ public class QuestionUtils {
 			Db.update("delete from t_question where 1=1");
 			Db.update("delete from t_question_select_option where 1=1");
 			
-			List<TestQuestion> TestQuestionList = new ArrayList<TestQuestion>();
+			List<TQuestion> TestQuestionList = new ArrayList<TQuestion>();
 			
 			for(TestQuestionDTO testDto : testQuestionList){
-				TestQuestion t = new TestQuestion().set("question_type", testDto.getType())
-								  .set("seq", Integer.valueOf(testDto.getSeq()))
-								  .set("title", testDto.getTitle())
-								  .set("select_answer", testDto.getSelectAnswer());
+				TQuestion t = new TQuestion();
+				t.setQuestionType(testDto.getType());	
+				t.setSeq(Integer.valueOf(testDto.getSeq()));
+				t.setTitle(testDto.getTitle());
+				t.setSelectAnswer(testDto.getSelectAnswer());
 				if(testDto.getType() == 3){
 					//判断题
 					t.set("select_answer", testDto.isJudgeAnswer() ? "1" : "0");
@@ -509,17 +544,17 @@ public class QuestionUtils {
 			}
 			//批量插入
 			Db.batchSave(TestQuestionList, 200);
-			List<TestQuestion> list = TestQuestion.dao.find("select * from t_question");
-			Map<String, TestQuestion> map = new HashMap<String, TestQuestion>();
-			for(TestQuestion testQ : list){
-				map.put(testQ.getInt("question_type") + "_" + testQ.getInt("seq"), testQ);
+			List<TQuestion> list = TQuestion.dao.findAll();
+			Map<String, TQuestion> map = new HashMap<String, TQuestion>();
+			for(TQuestion testQ : list){
+				map.put(getKey(testQ), testQ);
 			}
 			
-			List<TestQuestionSelectOption> TestQuestionSelectOptionList = new ArrayList<TestQuestionSelectOption>();
+			List<TQuestionSelectOption> TestQuestionSelectOptionList = new ArrayList<TQuestionSelectOption>();
 			for(TestQuestionDTO testDto : testQuestionList){
 //				TestQuestion testQuestion = TestQuestion.dao.findFirst("select * from t_question where question_type=? and seq=?", 
 //													testDto.getType(),Integer.valueOf(testDto.getSeq()));
-				String key = testDto.getType() + "_" + testDto.getSeq();
+				String key = getKey(testDto);
 				if(!map.containsKey(key)){
 					log.error(key);
 					continue;
@@ -532,9 +567,10 @@ public class QuestionUtils {
 						continue;
 					}
 					for(SelectOptionDTO selectOption : selectOptions){
-						TestQuestionSelectOption t = new TestQuestionSelectOption().set("question_id", map.get(key).getInt("id"))
-													  .set("select_key", selectOption.getKey())
-													  .set("select_desc", selectOption.getDesc());
+						TQuestionSelectOption t = new TQuestionSelectOption();
+						t.setQuestionId(map.get(key).getInt("id"));
+						t.setSelectKey(selectOption.getKey());
+						t.setSelectDesc(selectOption.getDesc());
 						TestQuestionSelectOptionList.add(t);
 					}
 				}
@@ -551,73 +587,60 @@ public class QuestionUtils {
 	 * 保存做题记录到数据库
 	 * @param questionAnswersList
 	 */
-	private static void saveTestQuestionRecord(List<QuestionAnswerDTO> questionAnswersList){
-		List<TestQuestionRecord> TestQuestionRecordList = new ArrayList<TestQuestionRecord>();
+	private static void saveTestQuestionRecord(QueryCondDTO queryCondDTO, List<QuestionAnswerDTO> questionAnswersList){
+		//更新用 插入时先和原先的错题对比，并将错题的标志位更新为2
+		List<String> updateList = new ArrayList<String>();															
+		List<TQuestionRecord> TestQuestionRecordList = new ArrayList<TQuestionRecord>();
 		for(QuestionAnswerDTO questionAnswer : questionAnswersList){
 			TestQuestionDTO testQuestionDto = questionAnswer.getTestQuestionDTO();
-			TestQuestionRecord t = new TestQuestionRecord().set("question_id", testQuestionDto.getId())
-											               .set("question_type", testQuestionDto.getType())
-											               .set("seq", Integer.valueOf(testQuestionDto.getSeq()))
-											               .set("select_option", questionAnswer.getSelectOption())
-											               .set("correct_option", questionAnswer.getCorrectAnswer())
-											               .set("correct_flag", questionAnswer.isCorrect() ? 1 : 0)
-											               .set("user_no", questionAnswer.getUserNo());
+			TQuestionRecord t = new TQuestionRecord();
+			t.setQuestionId(testQuestionDto.getId());
+			t.setQuestionType(testQuestionDto.getType());
+			t.setSeq(Integer.valueOf(testQuestionDto.getSeq()));
+			t.setSelectOption(questionAnswer.getSelectOption());
+			t.setCorrectFlag(questionAnswer.isCorrect() ? "1" : "0");
+			t.setCorrectOption(questionAnswer.getCorrectAnswer());
+			t.setUserNo(questionAnswer.getUserNo());		
 			TestQuestionRecordList.add(t);
-		}
+			
+			if(questionAnswer.isCorrect()) {
+				updateList.add(testQuestionDto.getId() + "");
+			}
+		}    
 		Db.batchSave(TestQuestionRecordList, 200);
 		log.info("做题记录保存成功...");
+		//更新原先的错题标志位
+		if(updateList != null && updateList.size() > 0) {
+			StringBuffer sqlBuff = new StringBuffer("update t_question_record set correct_flag=2 where question_id in (");
+			int size = updateList.size();
+			for(int i=0;i<size;i++) {
+				if(i > 0) {
+					sqlBuff.append(",");
+				}
+				sqlBuff.append("?");
+			}
+			sqlBuff.append(") and correct_flag=0 and user_no=?");
+			updateList.add(queryCondDTO.getUserNo());
+			String[] arr = new String[updateList.size()];
+			arr = updateList.toArray(arr);
+			Db.update(sqlBuff.toString(), arr);
+		}
+		
 	}
 	
 	/**
 	 * 从数据库读取错题登记簿
 	 * @return
 	 */
-	private static List<TestQuestionDTO> queryIncorrectQuestions(String userNo){
-		List<TestQuestionDTO> testQuestionList = new ArrayList<TestQuestionDTO>();
+	private static List<TestQuestionDTO> queryIncorrectQuestions(QueryCondDTO queryCond){
+		String userNo = queryCond.getUserNo();
+		int examId = queryCond.getExamId();
 		StringBuffer buff = new StringBuffer("select t2.*,t3.select_key,t3.select_desc,t1.select_option,datetime(t1.create_dt) as 'create_dt' ")
 									 .append(" from t_question_record t1 left join t_question t2 on t1.question_id = t2.id left join t_question_select_option t3 on t1.question_id = t3.question_id ")
-									 .append(" where t1.correct_flag=0 and user_no=? order by t1.create_dt desc");
+									 .append(" where t1.correct_flag=0 and t2.exam_id=? and t1.user_no=? order by t1.create_dt desc");
 //		List<TestQuestion> list = TestQuestion.dao.find("select t2.*,t3.select_key,t3.select_desc,t1.select_option,datetime(t1.create_dt) as 'create_dt' from t_question_record t1 left join t_question t2 on t1.question_id = t2.id left join t_question_select_option t3 on t1.question_id = t3.question_id where t1.correct_flag=0 order by t1.create_dt desc");
-		List<TestQuestion> list = TestQuestion.dao.find(buff.toString(),userNo);
-		String lastKey = "";
-		TestQuestionDTO tmp = null;
-		for(TestQuestion testQ : list){
-			String key = testQ.getInt("question_type") + "_" + testQ.getInt("seq");
-			if(!lastKey.equals(key)){
-				//和上一个key不同,说明出现新的试题
-				lastKey = key;
-				if(tmp != null){
-					testQuestionList.add(tmp);
-				}
-				//初始化新的试题
-				TestQuestionDTO t = new TestQuestionDTO();
-				t.setId(testQ.getInt("id"));
-				t.setType(testQ.getInt("question_type"));
-				t.setSeq(testQ.getInt("seq") + "");
-				t.setTitle(testQ.getStr("title"));
-				t.setSelectAnswer(testQ.getStr("select_answer"));
-				t.setSelectChoose(testQ.getStr("select_option"));
-				t.setCreateDtStr(testQ.getStr("create_dt"));
-				if(testQ.getInt("question_type") == 1 || testQ.getInt("question_type") == 2){
-					//选择题
-					List<SelectOptionDTO> selectOptions = new ArrayList<SelectOptionDTO>();
-					selectOptions.add(new SelectOptionDTO(testQ.getStr("select_key"),testQ.getStr("select_desc")));
-					t.setSelectOptions(selectOptions);
-				}else if(testQ.getInt("question_type") == 3){
-					//判断题
-					t.setJudgeAnswer("1".equals(testQ.getStr("select_answer")));
-				}
-				tmp = t;
-			}else{
-				//否则,则是同一个试题,新的选择题选项
-				List<SelectOptionDTO> selectOptions = tmp.getSelectOptions();
-				selectOptions.add(new SelectOptionDTO(testQ.getStr("select_key"),testQ.getStr("select_desc")));
-			}
-		}
-		if(tmp != null){
-			testQuestionList.add(tmp);
-		}
-		return testQuestionList;
+		List<TQuestion> list = TQuestion.dao.find(buff.toString(), examId, userNo);
+		return transform(list);
 	}
 	
 	/**
@@ -628,7 +651,7 @@ public class QuestionUtils {
 	public static QueryCondDTO getRecentQueryValue(String ip){
 		QueryCondDTO queryCond = new QueryCondDTO("1","1");
 		if(ip != null && !"".equals(ip)){
-			TestQueryCond dto = TestQueryCond.dao.findFirst("select * from T_QUERY_COND where ip=?", ip);
+			TQueryCond dto = TQueryCond.dao.findFirst("select * from T_QUERY_COND where ip=?", ip);
 			if(dto != null && dto.get("ip") != null){
 				queryCond.setQuestionType(dto.getStr("question_type"));
 				queryCond.setQueryValue(dto.getStr("query_value"));
@@ -644,19 +667,53 @@ public class QuestionUtils {
 	 */
 	public static void saveQueryCond(String ip, QueryCondDTO queryCond){
 		if(ip != null && !"".equals(ip)){
-			TestQueryCond dto = TestQueryCond.dao.findFirst("select * from T_QUERY_COND where ip=?", ip);
+			TQueryCond dto = TQueryCond.dao.findFirst("select * from T_QUERY_COND where ip=?", ip);
 			if(dto != null && dto.get("ip") != null){
 				//存在则更新
 				dto.set("question_type", queryCond.getQuestionType()).set("query_value", queryCond.getQueryValue()).update();
 			}else{
 				//没有则新增
-				new TestQueryCond().set("ip", ip)
-								   .set("question_type", queryCond.getQuestionType())
-								   .set("query_value", queryCond.getQueryValue())
-								   .save();
+				TQueryCond t = new TQueryCond();
+				t.setIp(ip);
+				t.setQueryValue(queryCond.getQueryValue());
+				t.setQuestionType(Integer.parseInt(queryCond.getQuestionType()));
+				t.save();
 			}
 		}
 	}
+	
+	/**
+	 * 生成唯一的key
+	 * @param testQuestion
+	 * @return
+	 */
+	public static String getKey(TQuestion testQuestion) {
+		StringBuilder sb = new StringBuilder();
+		sb.append(testQuestion.getExamId()).append("_").append(testQuestion.getQuestionType()).append("_").append(testQuestion.getSeq());
+		return sb.toString();
+	}
+	
+	/**
+	 * 生成唯一的key
+	 * @param testQuestion
+	 * @return
+	 */
+	public static String getKey(TestQuestionDTO testQuestion) {
+		StringBuilder sb = new StringBuilder();
+		sb.append(testQuestion.getExamId()).append("_").append(testQuestion.getType()).append("_").append(testQuestion.getSeq());
+		return sb.toString();
+	}
+	
+	/**
+	 * 根据URL获取EXAM
+	 * @param url
+	 * @return
+	 */
+	public static TExam getExamByUrl(String url) {
+		TExam exam = TExam.dao.findFirst("select * from t_exam where url=?", url);
+		return exam;
+	}
+	
 	
 	public static void main(String[] args) {
 		QuestionUtils.parseFromTxt(); 

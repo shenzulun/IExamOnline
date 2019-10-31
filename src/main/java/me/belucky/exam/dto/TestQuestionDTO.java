@@ -64,6 +64,12 @@ public class TestQuestionDTO implements IBean{
 	 * 创建时间
 	 */
 	private String createDtStr;
+	/**
+	 * 试题类型
+	 * 1-财会考试
+	 * 2-乡村振兴
+	 */
+	private int examId;
 		
 	public TestQuestionDTO(){}
 	
@@ -167,5 +173,14 @@ public class TestQuestionDTO implements IBean{
 	public void setCreateDtStr(String createDtStr) {
 		this.createDtStr = createDtStr;
 	}
+
+	public int getExamId() {
+		return examId;
+	}
+
+	public void setExamId(int examId) {
+		this.examId = examId;
+	}
+	
 	
 }

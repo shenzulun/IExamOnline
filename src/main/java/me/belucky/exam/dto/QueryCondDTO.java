@@ -22,6 +22,14 @@ public class QueryCondDTO implements IBean{
 	 * 查询条件
 	 */
 	private String queryValue;
+	/**
+	 * 试题ID
+	 */
+	private int examId;
+	/**
+	 * 用户号
+	 */
+	private String userNo;
 	
 	public QueryCondDTO(){}
 	
@@ -31,6 +39,14 @@ public class QueryCondDTO implements IBean{
 		this.queryValue = queryValue;
 	}
 	
+	public QueryCondDTO(String questionType, String queryValue, int examId, String userNo) {
+		super();
+		this.questionType = questionType;
+		this.queryValue = queryValue;
+		this.examId = examId;
+		this.userNo = userNo;
+	}
+
 	public String getQuestionType() {
 		return questionType;
 	}
@@ -43,6 +59,20 @@ public class QueryCondDTO implements IBean{
 	public void setQueryValue(String queryValue) {
 		this.queryValue = queryValue;
 	}
-	
-	
+
+	public int getExamId() {
+		return examId;
+	}
+
+	public void setExamId(int examId) {
+		this.examId = examId;
+	}
+
+	public String getUserNo() {
+		return userNo;
+	}
+
+	public void setUserNo(String userNo) {
+		this.userNo = userNo;
+	}
 }
