@@ -111,6 +111,20 @@
                     <target>8</target>
                 </configuration>
             </plugin>
+            <plugin>
+		        <groupId>org.eclipse.jetty</groupId>
+		        <artifactId>jetty-maven-plugin</artifactId>
+		        <version>9.4.15.v20190215</version>
+		        <configuration>
+		          <scanIntervalSeconds>10</scanIntervalSeconds>
+		          <httpConnector>
+		            <port>8080</port>
+		          </httpConnector>
+		          <webApp>
+		            <contextPath>/</contextPath>
+		          </webApp>
+		        </configuration>
+	      </plugin>
         </plugins>
     </build>
   

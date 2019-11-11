@@ -92,7 +92,7 @@ public class XczxExamInitTask extends AbstractTask{
 						t.setQuestionType(3);
 						t.setTitle(row[1]);
 						t.setSeq(Integer.parseInt(row[0]));
-//						t.setSelectAnswer("T".equals(row[2]) ? "1" : "0");
+						t.setSelectAnswer("T".equals(row[2]) ? "1" : "0");
 						questionList.add(t);
 					}else if(sheetType == 3) {
 						TQuestion t = new TQuestion();

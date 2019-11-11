@@ -136,6 +136,11 @@ public class QuestionUtils {
 				return list;
 			}
 		}else{
+			//判断是否只查询错题
+			if("showError".equals(seqno)) {
+				list = queryIncorrectQuestions(queryCond, Integer.parseInt(questionType));
+				return list;
+			}
 			String listKey = "exam_" + queryCond.getExamId() + "_" + questionType;
 			list = CacheUtils.getCache(listKey);
 			if(seqno == null || "".equals(seqno)){
@@ -432,7 +437,7 @@ public class QuestionUtils {
 	 * @return
 	 */
 	private static List<TestQuestionDTO> initFromDB(){
-		List<TQuestion> list = TQuestion.dao.find("select t1.*,t2.select_key,t2.select_desc from t_question t1 left join t_question_select_option t2 on t1.id=t2.question_id order by t1.exam_id,t1.question_type,t1.seq asc");
+		List<TQuestion> list = TQuestion.dao.find("select t1.*,t2.select_key,t2.select_desc from t_question t1 left join t_question_select_option t2 on t1.id=t2.question_id where t1.show_flag='1' order by t1.exam_id,t1.question_type,t1.seq asc");
 		return transform(list);
 	}
 	
@@ -640,6 +645,21 @@ public class QuestionUtils {
 									 .append(" where t1.correct_flag=0 and t2.exam_id=? and t1.user_no=? order by t1.create_dt desc");
 //		List<TestQuestion> list = TestQuestion.dao.find("select t2.*,t3.select_key,t3.select_desc,t1.select_option,datetime(t1.create_dt) as 'create_dt' from t_question_record t1 left join t_question t2 on t1.question_id = t2.id left join t_question_select_option t3 on t1.question_id = t3.question_id where t1.correct_flag=0 order by t1.create_dt desc");
 		List<TQuestion> list = TQuestion.dao.find(buff.toString(), examId, userNo);
+		return transform(list);
+	}
+	
+	/**
+	 * 从数据库读取错题登记簿
+	 * @return
+	 */
+	private static List<TestQuestionDTO> queryIncorrectQuestions(QueryCondDTO queryCond, int questionType){
+		String userNo = queryCond.getUserNo();
+		int examId = queryCond.getExamId();
+		StringBuffer buff = new StringBuffer("select t2.*,t3.select_key,t3.select_desc,t1.select_option,datetime(t1.create_dt) as 'create_dt' ")
+									 .append(" from t_question_record t1 left join t_question t2 on t1.question_id = t2.id left join t_question_select_option t3 on t1.question_id = t3.question_id ")
+									 .append(" where t1.correct_flag=0 and t2.exam_id=? and t1.user_no=? and t1.question_type=? order by t1.create_dt desc");
+//		List<TestQuestion> list = TestQuestion.dao.find("select t2.*,t3.select_key,t3.select_desc,t1.select_option,datetime(t1.create_dt) as 'create_dt' from t_question_record t1 left join t_question t2 on t1.question_id = t2.id left join t_question_select_option t3 on t1.question_id = t3.question_id where t1.correct_flag=0 order by t1.create_dt desc");
+		List<TQuestion> list = TQuestion.dao.find(buff.toString(), examId, userNo, questionType);
 		return transform(list);
 	}
 	

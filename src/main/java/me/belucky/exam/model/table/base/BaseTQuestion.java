@@ -57,4 +57,12 @@ public abstract class BaseTQuestion<M extends BaseTQuestion<M>> extends Model<M>
 		return getInt("exam_id");
 	}
 
+	public void setShowFlag(java.lang.String showFlag) {
+		set("show_flag", showFlag);
+	}
+	
+	public java.lang.String getShowFlag() {
+		return getStr("show_flag");
+	}
+
 }

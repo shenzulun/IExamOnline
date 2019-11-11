@@ -31,6 +31,11 @@
                 $('#queryValue').val('RANDOM_50');  
                 ajaxQuery('RANDOM_50');      
             });
+            
+            $('#btn-showError').click(function(){
+                $('#queryValue').val('showError');  
+                ajaxQuery('showError');      
+            });
         })  
         
         function ajaxQuery(queryValue){
@@ -224,6 +229,7 @@
 2. 模板
 <span id="btn-random20" class="input-group-addon btn btn-success">随机展示20题</span>
 <span id="btn-random50" class="input-group-addon btn btn-success">随机展示50题</span>
+<span id="btn-showError" class="input-group-addon btn btn-success">错题</span>
 </pre>    
     </div>
     <div class="col-xs-8">
