@@ -1,0 +1,272 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"> 
+<html xmlns="http://www.w3.org/1999/xhtml"> 
+<head>
+    <title>${exam.name}-模拟考试</title>
+    <#include "/common/_header.html"/>
+    <script type="text/javascript">
+    
+        var examId = ${exam.id};
+        $(document).ready(function(){   
+                    
+            //初始化参数
+            $('#queryBtn').click(function(){
+                var queryValue = $('#queryValue').val();  
+                ajaxQuery(queryValue);        
+            });
+
+            $(document).keydown(function(event){
+                if(event.keyCode == 13){
+                    $('#queryBtn').click();
+                }
+            });
+            var queryValue = $('#queryValue').val();  
+            //ajaxQuery(queryValue); 
+
+            $('#btn-random20').click(function(){
+                $('#queryValue').val('RANDOM_20');    
+                ajaxQuery('RANDOM_20');   
+            });
+
+            $('#btn-random50').click(function(){
+                $('#queryValue').val('RANDOM_50');  
+                ajaxQuery('RANDOM_50');      
+            });
+            
+            $('#btn-showError').click(function(){
+                $('#queryValue').val('showError');  
+                ajaxQuery('showError');      
+            });
+        })  
+        
+        function ajaxQuery(queryValue){
+            //var queryValue = $('#queryValue').val();  
+            var questionType = $('#questionType').val();
+            $('#queryBtn').attr('disabled',true);
+            $.ajax({
+               type: "GET",
+               url: "listQuestions",
+               data: "queryValue=" + queryValue + "&questionType=" + questionType + "&examId=" + examId,
+               success: function(data){                    
+                   $('#id' + questionType).empty();         
+                   var idPrex = examId + "_" + questionType;
+                   var arr = data;      
+                   var content = "";    
+                   if(arr.length > 2000){
+                        alert("匹配[" + arr.length + "]条记录, 浏览器压力很大, 请耐心等待...");
+                   }
+                   var style1 = " style='background-color: rgb(249,205,173);' ";    //错误选项
+                   var style2 = " style='background-color: #449d44;' ";             //正确选项
+                   for(var i=0;i<arr.length;i++){
+                       var qType = arr[i].type;                       
+                       if(qType == '1' || qType == '2'){
+                           content += "<h4 class='article-title'>" + arr[i].title + "</h4>";
+                            //选择题
+                           var options = arr[i].selectOptions;
+                           if(options == null){
+                               options = {};
+                           }              
+                           if(questionType == '4'){
+                               //错题簿需要展示错误选项和正确选项      
+                               //时间戳
+                               content += "<div class='article-date'>" + arr[i].createDtStr + "</div><pre>"
+                           }else{
+                               content += "<pre>";
+                           }    
+                           for(var j=0;j<options.length;j++){
+                               if(questionType == '4'){
+                                    if(arr[i].selectAnswer.indexOf(options[j].key) != -1){
+                                        //正确答案
+                                        content += "<p class='form-control' data-submit='0' readonly='true' type='text' id='Q_" + idPrex + "_" + arr[i].seq + "_" + options[j].key + "' value='" + options[j].desc + "'" + style2 + ">" + options[j].desc + "</p>";                                     
+                                    }else if(arr[i].selectChoose.indexOf(options[j].key) != -1){
+                                        //错误答案
+                                        content += "<p class='form-control' data-submit='0' readonly='true' type='text' id='Q_" + idPrex + "_" + arr[i].seq + "_" + options[j].key + "' value='" + options[j].desc + "'" + style1 + ">" + options[j].desc + "</p>";                                                                             
+                                    }else{
+                                        content += "<p class='form-control' data-submit='0' readonly='true' type='text' id='Q_" + idPrex + "_" + arr[i].seq + "_" + options[j].key + "' value='" + options[j].desc + "'>" + options[j].desc + "</p>";
+                                    }
+                               }else{
+                                   content += "<p class='form-control' data-submit='0' readonly='true' type='text' onclick='checkAnswer(this)' id='Q_" + idPrex + "_" + arr[i].seq + "_" + options[j].key + "' value='" + options[j].desc + "'>" + options[j].desc + "</p>";
+                               }               
+                           };
+                           content += "</pre><br/>";
+                       }else if(qType == '3'){
+                           content += "<h4>" + arr[i].title + "</h4><pre>" 
+                           //判断题
+                           if(questionType == '4'){
+                               //错题簿
+                               if(arr[i].selectChoose == '1'){
+                                   //题目答案为否
+                                   content += "<p class='form-control' data-submit='0' readonly='true' type='text' onclick='checkAnswer(this)' id='Q_" + idPrex + "_" + arr[i].seq + "_1' " + style1 + ">是</p>"
+                                   + "<p class='form-control' data-submit='0' readonly='true' type='text' onclick='checkAnswer(this)' id='Q_" + idPrex + "_" + arr[i].seq + "_0' " + style2 + ">否</p>"; 
+                               }else if(arr[i].selectChoose == '0'){
+                                 //题目答案为是
+                                   content += "<p class='form-control' data-submit='0' readonly='true' type='text' onclick='checkAnswer(this)' id='Q_" + idPrex + "_" + arr[i].seq + "_1' " + style2 + ">是</p>"
+                                   + "<p class='form-control' data-submit='0' readonly='true' type='text' onclick='checkAnswer(this)' id='Q_" + idPrex + "_" + arr[i].seq + "_0' " + style1 + ">否</p>"; 
+                               }
+                           }else{
+                               content += "<p class='form-control' data-submit='0' readonly='true' type='text' onclick='checkAnswer(this)' id='Q_" + idPrex + "_" + arr[i].seq + "_1'>是</p>"
+                               + "<p class='form-control' data-submit='0' readonly='true' type='text' onclick='checkAnswer(this)' id='Q_" + idPrex + "_" + arr[i].seq + "_0'>否</p>"; 
+                           }
+                           content += "</pre><br/>";
+                       }
+                   }
+                   $('#id' + questionType).append(content);     
+                   $('#queryBtn').attr('disabled',false);
+               },
+               error: function (XMLHttpRequest, textStatus, errorThrown) {
+            	   $('#queryBtn').attr('disabled',false);
+                    this; 
+                }
+            });         
+        }
+
+        
+        var lastQueryValue = '';
+        //TAB页切换事件
+        function showDiv(obj,divId){
+            $('#navbar li').removeClass('active');
+            $(obj).parent().addClass('active');
+            $('.div-taggle').hide();
+            $('#questionType').val(divId);
+            $('#id' + divId).show();  
+
+            if(divId == '4' || divId == '5'){
+                //不展示查询框
+                lastQueryValue = $('#queryValue').val();
+                $('#queryValue').val('');
+            }else{
+                if($('#queryValue').val() == ''){
+                    $('#queryValue').val(lastQueryValue);
+                }
+            }          
+        }
+
+        //试题答案选中事件
+        function checkAnswer(obj){
+            if($(obj).hasClass('tr-click')){
+                $(obj).css('background-color','');
+                $(obj).removeClass('tr-click');
+            }else{
+                 $(obj).addClass('tr-click');
+                 $(obj).css('background-color','rgb(249,205,173)');
+            }
+            $(obj).attr('data-submit','0');
+        }    
+
+        function submitAnswer(){
+            var checkAnswers = $('.tr-click').map(function(){
+            	//只取data-submit=0的数据
+            	if('0' == $(this).attr('data-submit')){
+            		return $(this).attr('id');
+            	}else{
+            		return '';	
+            	}
+            }).get().join(',');   
+            if(checkAnswers == ''){
+                alert("不允许提交白卷...");
+                return;
+            }  
+            var reg = new RegExp(',','g');
+            var s = checkAnswers.replace(reg,'');
+            if(s == ''){
+            	alert("不允许重复提交...");
+            	return;
+            }
+            
+            $('#submit-btn').attr('disabled',true);
+            $.ajax({
+                type: "POST",
+                url: "submitAnswer",
+                data: "checkAnswers=" + checkAnswers + "&examId=" + examId,
+                success: function(data){                    
+                    var arr = data;      
+                    debugger;
+                    for(var i=0;i<arr.length;i++){
+                        var questionId = arr[i].questionId;
+                        var correctAnswers = arr[i].correctAnswer;
+                        var corrArr = correctAnswers.split('');
+                        for(var j=0;j<corrArr.length;j++){
+                            var id = '#Q_' + questionId + '_' + corrArr[j];
+                            $(id).css('background-color','#449d44');
+                            $(id).attr('data-submit','1');
+                        }
+                    }
+                    $('#submit-btn').attr('disabled',false);
+                },
+                error: function (XMLHttpRequest, textStatus, errorThrown) {
+                	$('#submit-btn').attr('disabled',false);
+                     this; 
+                 }
+             });       
+        }
+    </script>
+</head>
+<body>
+
+<nav class="navbar navbar-default navbar-fixed-top">
+   <div class="container" style="">
+     <div id="navbar" class="navbar-collapse collapse">
+       <ul class="nav navbar-nav">
+         
+       </ul>
+       <ul class="nav navbar-nav navbar-right">
+           <li><a class='btn btn-block btn-default' id="submit-btn" href="javascript:void(0)" onclick="submitAnswer()">提交</a></li>   
+       </ul>
+     </div>
+   </div>
+</nav>
+ <br/>    
+<div class="container" style="width: 95%;">
+    <div class="col-xs-2">
+   
+    </div>
+    <div class="col-xs-8">
+      
+    <div id="form-autorun" class="form-signin">
+        
+    </div>
+    <br />
+    <div class="table-responsive">
+        <h3 style="color:green;">1. 单选题(${examList1?size}道)</h3>
+        <hr />
+        <#list examList1 as e>
+            <h4 class='article-title'>${e_index + 1}${e.title.substring(e.title?index_of('、'))}</h4>
+            <p>
+            <#list e.getSelectOptions() as s>
+                <div class='form-control' data-submit='0' readonly='true' type='text' onclick='checkAnswer(this)' 
+                    id='${e.selectKeyId + s.key}' value='${s.desc}'>${s.desc}</div>
+            </#list>
+            </p>
+            <br/>
+        </#list>
+        
+        <h3 style="color:green;">2. 多选题(${examList2?size}道)</h3>
+        <hr />
+        <#list examList2 as e>
+            <h4 class='article-title'>${e_index + 1}${e.title.substring(e.title?index_of('、'))}</h4>
+            <p>
+            <#list e.getSelectOptions() as s>
+                <div class='form-control' data-submit='0' readonly='true' type='text' onclick='checkAnswer(this)' 
+                    id='${e.selectKeyId + s.key}' value='${s.desc}'>${s.desc}</div>
+            </#list>
+            </p>
+            <br/>
+        </#list>
+        
+        <h3 style="color:green;">3. 判断题(${examList3?size}道)</h3>
+        <hr />
+        <#list examList3 as e>
+            <h4 class='article-title'>${e_index + 1}${e.title.substring(e.title?index_of('、'))}</h4>
+            <p>
+                 <div class='form-control' data-submit='0' readonly='true' type='text' onclick='checkAnswer(this)' id="${e.selectKeyId + '1'}">是</div>
+                 <div class='form-control' data-submit='0' readonly='true' type='text' onclick='checkAnswer(this)' id="${e.selectKeyId + '0'}">否</div>  
+            </p>
+            <br/>
+        </#list>
+    </div>
+    </div>
+    <div class="col-xs-2">
+
+    </div>
+</div>
+<#include "/common/_footer.html"/>
+</body>

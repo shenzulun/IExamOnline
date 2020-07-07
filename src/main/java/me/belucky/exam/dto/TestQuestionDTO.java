@@ -70,6 +70,10 @@ public class TestQuestionDTO implements IBean{
 	 * 2-乡村振兴
 	 */
 	private int examId;
+	/**
+	 * 选项唯一主键
+	 */
+	private String selectKeyId;
 		
 	public TestQuestionDTO(){}
 	
@@ -181,6 +185,13 @@ public class TestQuestionDTO implements IBean{
 	public void setExamId(int examId) {
 		this.examId = examId;
 	}
-	
+
+	public String getSelectKeyId() {
+		return "Q_" +  examId + "_" + type + "_" + seq + "_";
+	}
+
+	public void setSelectKeyId(String selectKeyId) {
+		this.selectKeyId = selectKeyId;
+	}
 	
 }

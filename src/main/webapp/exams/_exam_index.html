@@ -133,6 +133,9 @@
                 //不展示查询框
                 lastQueryValue = $('#queryValue').val();
                 $('#queryValue').val('');
+            }else if(divId == '6'){
+            	//alert($('#sys_exam_xczx_test').attr('href'));
+            	$('#sys_exam_xczx_test')[0].click();
             }else{
                 if($('#queryValue').val() == ''){
                     $('#queryValue').val(lastQueryValue);
@@ -253,7 +256,7 @@
     </div>
     </div>
     <div class="col-xs-2">
-
+        <a id="sys_exam_xczx_test" href="${exam.url}?test" target="_blank" type="hidden" />
     </div>
 </div>
 <#include "/common/_footer.html"/>

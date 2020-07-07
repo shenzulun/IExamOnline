@@ -110,6 +110,7 @@ public class QuestionUtils {
 		result.add(new QuestionTypeDTO("3","判断题"));
 		result.add(new QuestionTypeDTO("4","错题簿"));
 //		result.add(new QuestionTypeDTO("5","历史"));
+		result.add(new QuestionTypeDTO("6","模拟考"));
 		return result;
 	}
 	
@@ -162,7 +163,12 @@ public class QuestionUtils {
 					}
 				}else{
 					for(int r : randArr){
-						result.add(cacheMap.get(queryCond.getExamId() + "_" + questionType + "_" + r));
+						result.add(list.get(r));
+//						TestQuestionDTO t = cacheMap.get(queryCond.getExamId() + "_" + questionType + "_" + r);
+//						if(t == null) {
+//							log.info(queryCond.getExamId() + "_" + questionType + "_" + r);
+//						}
+//						result.add(t);
 					}
 				}
 				continue;

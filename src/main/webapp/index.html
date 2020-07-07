@@ -3,7 +3,7 @@
 <head>
     <meta charset='utf-8' />
     <title>统一登录(开发版)</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="renderer" content="webkit|ie-stand" />  
     <meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1" /> 
     <link rel="stylesheet" type="text/css" href="static/css/style.css" />
@@ -24,7 +24,7 @@
         $("input[type='button']").click(function(){
             var target = "custWindow" + new Date().getTime();
             //创建空白页面
-            //createTempALink('custLinkA',target,'about:blank');    
+            createTempALink('custLinkA',target,'about:blank');    
             var id = $(this).attr('id');
             $.ajax({
                type: "POST",
@@ -56,6 +56,87 @@
         document.body.appendChild(tempB);
         document.getElementById(objId).click();
         document.body.removeChild(tempB);  
+    }
+    
+    function windowOpen(url,target){
+    var a = document.createElement("a");
+    a.setAttribute("href", url);
+    if(target == null){
+        target = '';
+    }
+    a.setAttribute("target", target);
+    document.body.appendChild(a);
+    if(a.click){
+        a.click();
+        
+    }else{
+        try{
+            var evt = document.createEvent('Event');
+            a.initEvent('click', true, true);
+            a.dispatchEvent(evt);
+            
+        }catch(e){
+            window.open(url);
+            
+        }
+    }
+    setTimeout(removeEL(a),1000);
+    
+}
+
+    function removeEL(el){
+        document.body.removeChild(el);
+    }
+
+    function fireEvent(el,type) {  
+          var evt;  
+          if (document.createEvent) { // DOM Level 2 standard  
+            evt = document.createEvent("MouseEvents");  
+            evt.initMouseEvent(type, true, true, window,  
+              0, 0, 0, 0, 0, false, false, false, false, 0, null);  
+          
+            el.dispatchEvent(evt);  
+          } else if (el.fireEvent) { // IE  
+            el.fireEvent('on' + type);  
+          }  
+        }  
+
+    function addEvent(el, type, fn){
+        if(document.addEventListener){
+            el.addEventListener(type, fn, true);
+        }else if(document.attachEvent){
+            el.attachEvent("on"+type, fn);
+        }else{
+            el["on"+type] = fn;
+        }
+    }
+    
+    function click1(url){
+        var features = 'top=80,left=50,width=1180,height=768,toolbar=no,location=no,directories=0,status=1,menubar=no,scrollbars=yes,resizable=yes';              
+        
+        window.open(url,'_blank',features);
+    }   
+
+    function openPostWindow(url, target, features, closeOnLoseFocus){
+        var curSubWindow = window.open('about:blank', target, features);
+        curSubWindow.focus();
+        var a = document.createElement("a");
+        a.setAttribute("href", url);
+        a.setAttribute("target", target);
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    }
+
+    function openCustWindow(url, target, features, closeOnLoseFocus){
+        if(closeOnLoseFocus){
+            var curSubWindow = window.open('about:blank', target, features);
+            curSubWindow.focus();
+        } else {
+            var win = window.open('about:blank', target, features);
+            win.focus();
+        }
+        
     }
     
     function adjustDivHeight(){
@@ -99,7 +180,7 @@
             <input type="button" id="sys_exam_ck" class="btn btn-lg btn-success btn-block  header1"  title="财会考试" value="刷题-财会考试"/>
         </div>
         <div class="col-xs-4" style="margin-top: 10px">
-            <input type="button" id="" class="btn btn-lg btn-primary btn-block  header1"  title="" value=""/>
+            <input type="button" id="sys_exam_wgxw" class="btn btn-lg btn-primary btn-block  header1"  title="违规行为考试" value="刷题-农信违规行为处理办法考试"/>
         </div>
     </div>
     <div class="row-eq-height">
@@ -137,3 +218,4 @@
 <a id="a-autorun" href="" target="_blank" style="visibility: hidden;"><span id="spanId">link</span></a> 
  -->
 </body>
+</html>

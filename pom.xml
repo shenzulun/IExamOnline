@@ -72,6 +72,12 @@
       <scope>system</scope> 
       <systemPath>${project.basedir}/src/main/webapp/WEB-INF/lib/IEasyTool-1.0.2.jar</systemPath> 
     </dependency>
+    
+    <dependency>
+      <groupId>com.alibaba</groupId>
+      <artifactId>easyexcel</artifactId>
+      <version>2.1.6</version>
+    </dependency>
 
       <!-- log -->
 		<dependency>

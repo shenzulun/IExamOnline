@@ -73,4 +73,19 @@ public class CommonUtils extends me.belucky.easytool.util.CommonUtils{
 		}
 	}
 	
+	/**
+	 * 查询数组中的指定数据的位置
+	 * @param arr
+	 * @param target
+	 * @return
+	 */
+	public static int indexOfArray(String[] arr, String target){
+		for(int i=0,len=arr.length;i<len;i++){
+			if(target.indexOf(arr[i]) != -1){
+				return i;
+			}
+		}
+		return -1;
+	}
+	
 }
